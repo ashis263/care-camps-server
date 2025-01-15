@@ -54,6 +54,14 @@ async function run() {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
             res.send({ token });
+        });
+
+        //checking if admin
+        app.get('/admin', tokenVerifier, async(req, res) => {
+            const email = req.query.email;
+            const query = { email: email};
+            const result = await userCollection.findOne(query);
+            res.send(result);
         })
 
         //user related api
