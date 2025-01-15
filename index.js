@@ -10,6 +10,23 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+//auth middlewares
+const tokenVerifier = ( req, res, next ) => {
+    const token = req.headers.token;
+    if(!token){
+        return res.status(401).send({message: "unauthorized"});
+    };
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+        if(error){
+            return res.status(401).send({message: 'unauthorized'});
+        };
+        if(req.query.email !== decoded.email){
+            return res.status(403).send({ message: 'forbidden'});
+        };
+        next();
+    })
+}
+
 app.get('/', (req, res) => {
     res.send("server running");
 });
