@@ -21,6 +21,7 @@ const tokenVerifier = ( req, res, next ) => {
             return res.status(401).send({message: 'unauthorized'});
         };
         if(req.query.email !== decoded.email){
+            console.log(decoded.email, ' email');
             return res.status(403).send({ message: 'forbidden'});
         };
         next();
@@ -72,6 +73,16 @@ async function run() {
             };
             const option = { upsert: true };
             const result = await userCollection.updateOne(query, updatedDoc, option);
+            res.send(result);
+        });
+
+        app.patch('/users', tokenVerifier, async(req, res) => {
+            const email = req.query.email;
+            const query = { email: email};
+            const updatedDoc = {
+                $set: req.body
+            };
+            const result = await userCollection.updateOne(query, updatedDoc);
             res.send(result);
         })
 
