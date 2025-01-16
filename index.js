@@ -101,6 +101,11 @@ async function run() {
         app.post('/camps', tokenVerifier, adminVerifier, async(req, res) => {
             const result = await campCollection.insertOne(req.body);
             res.send(result);
+        });
+
+        app.get('/camps', async(req, res) => {
+            const result = await campCollection.find().toArray();
+            res.send(result);
         })
 
         // Send a ping to confirm a successful connection
