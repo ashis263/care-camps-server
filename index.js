@@ -103,8 +103,14 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/camps', async(req, res) => {
-            const result = await campCollection.find().toArray();
+        app.get('/camps/count', async(req, res) => {
+            const result = await campCollection.estimatedDocumentCount();
+            res.send({count: result});
+        });
+
+        app.get('/camps', async(req,res) => {
+            const page = parseInt(req.query.page);
+            const result = await campCollection.find().skip((page-1) * 6).limit(6).toArray();
             res.send(result);
         })
 
