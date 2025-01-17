@@ -135,7 +135,7 @@ async function run() {
                     { dateTime: { $regex: searchKey, $options: 'i'} }
                 ]
             }
-            const result = await campCollection.find(query).skip((page-1) * 6).limit(6).sort({[sortBy]: 1}).toArray();
+            const result = await campCollection.find(query).skip((page-1) * 6).limit(6).sort({[sortBy]: 1}).collation({ locale: 'en', strength: 2 }).toArray();
             res.send(result);
         })
 
