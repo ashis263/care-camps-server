@@ -124,7 +124,16 @@ async function run() {
         app.get('/camps', async(req,res) => {
             const page = parseInt(req.query.page);
             const sortBy = req.query.sortBy;
-            const result = await campCollection.find().skip((page-1) * 6).limit(6).sort({[sortBy]: 1}).toArray();
+            const searchKey = req.query.searchKey;
+            const query = {
+                $or: [
+                    { name: { $regex: searchKey, $options: 'i'} },
+                    { location: { $regex: searchKey, $options: 'i'} },
+                    { professionalName: { $regex: searchKey, $options: 'i'} },
+                    { dateTime: { $regex: searchKey, $options: 'i'} }
+                ]
+            }
+            const result = await campCollection.find(query).skip((page-1) * 6).limit(6).sort({[sortBy]: 1}).toArray();
             res.send(result);
         })
 
