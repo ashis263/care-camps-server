@@ -99,7 +99,13 @@ async function run() {
 
         //camp related apis
         app.post('/camps', tokenVerifier, adminVerifier, async(req, res) => {
-            const result = await campCollection.insertOne(req.body);
+            const {fees, participantCount, ...others } = req.body;
+            const modified = {
+                ...others,
+                fees: parseFloat(fees),
+                participantCount: parseInt(participantCount)
+            }
+            const result = await campCollection.insertOne(modified);
             res.send(result);
         });
 
