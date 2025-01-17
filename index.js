@@ -4,6 +4,7 @@ const cors = require('cors');
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
+const moment = require('moment');
 const port = process.env.PORT || 5000;
 
 //middlewares
@@ -99,11 +100,12 @@ async function run() {
 
         //camp related apis
         app.post('/camps', tokenVerifier, adminVerifier, async(req, res) => {
-            const {fees, participantCount, ...others } = req.body;
+            const {fees, participantCount, dateTime, ...others } = req.body;
             const modified = {
                 ...others,
                 fees: parseFloat(fees),
-                participantCount: parseInt(participantCount)
+                participantCount: parseInt(participantCount),
+                dateTime: moment(dateTime).format('ddd MMM DD YYYY,  h:mm:ss A')
             }
             const result = await campCollection.insertOne(modified);
             res.send(result);
