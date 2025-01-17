@@ -137,7 +137,14 @@ async function run() {
             }
             const result = await campCollection.find(query).skip((page-1) * 6).limit(6).sort({[sortBy]: 1}).collation({ locale: 'en', strength: 2 }).toArray();
             res.send(result);
-        })
+        });
+
+        app.get('/adminCamps', tokenVerifier, adminVerifier, async(req, res) => {
+            const email = req.query.email;
+            const query = { addedBy: email};
+            const result = await campCollection.find().toArray();
+            res.send(result);
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
