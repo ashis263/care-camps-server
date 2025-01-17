@@ -117,7 +117,8 @@ async function run() {
 
         app.get('/camps', async(req,res) => {
             const page = parseInt(req.query.page);
-            const result = await campCollection.find().skip((page-1) * 6).limit(6).toArray();
+            const sortBy = req.query.sortBy;
+            const result = await campCollection.find().skip((page-1) * 6).limit(6).sort({[sortBy]: 1}).toArray();
             res.send(result);
         })
 
