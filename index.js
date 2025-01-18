@@ -146,6 +146,23 @@ async function run() {
             res.send(result);
         });
 
+        app.delete('/delete-camp/:campId', tokenVerifier, adminVerifier, async(req, res) => {
+            const id = req.params.campId;
+            const query = { _id: new ObjectId(id) };
+            const result = await campCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.patch('/update-camp/:campId', tokenVerifier, adminVerifier, async(req, res) => {
+            const id = req.params.campId;
+            const query = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: req.body
+            }
+            const result = await campCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        })
+
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
