@@ -33,6 +33,7 @@ async function run() {
         // await client.connect();
         const userCollection = client.db('care-camps').collection('users');
         const campCollection = client.db('care-camps').collection('camps');
+        const registeredCampCollection = client.db('care-camps').collection('registeredCamps');
 
         //auth middlewares
         const tokenVerifier = (req, res, next) => {
@@ -199,10 +200,30 @@ async function run() {
         app.patch('/update-camp/:campId', tokenVerifier, adminVerifier, async (req, res) => {
             const id = req.params.campId;
             const query = { _id: new ObjectId(id) };
+            const { fees, participantCount, ...others } = req.body;
             const updatedDoc = {
-                $set: req.body
+                $set: {
+                    ...others,
+                    fees: parseFloat(fees),
+                    participantCount: parseInt(participantCount)
+                }
             }
             const result = await campCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        });
+
+        //camp joining related api
+
+        app.put('/registeredCamps', tokenVerifier, async (req, res) => {
+            const query = { findingKey: req.query.email + req.query.campId };
+            const updatedDoc = {
+                $set: req.body
+
+            };
+            const option = { upsert: true }
+            const campQuery = { _id: new ObjectId(req.query.campId) };
+            const inc = await campCollection.updateOne(campQuery, { $inc: { participantCount: 1 } });
+            const result = await registeredCampCollection.updateOne(query, updatedDoc, option);
             res.send(result);
         })
 
