@@ -35,29 +35,29 @@ async function run() {
         const campCollection = client.db('care-camps').collection('camps');
 
         //auth middlewares
-        const tokenVerifier = ( req, res, next ) => {
+        const tokenVerifier = (req, res, next) => {
             const token = req.headers.token;
-            if(!token){
-                return res.status(401).send({message: "unauthorized"});
+            if (!token) {
+                return res.status(401).send({ message: "unauthorized" });
             };
             jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
-                if(error){
-                    return res.status(401).send({message: 'unauthorized'});
+                if (error) {
+                    return res.status(401).send({ message: 'unauthorized' });
                 };
-                if(req.query.email !== decoded.email){
-                    return res.status(403).send({ message: 'forbidden'});
+                if (req.query.email !== decoded.email) {
+                    return res.status(403).send({ message: 'forbidden' });
                 };
                 next();
             })
         };
-        
-        const adminVerifier = async(req, res, next) =>{
+
+        const adminVerifier = async (req, res, next) => {
             const email = req.query.email;
             const query = { email: email };
             const user = await userCollection.findOne(query);
             const isAdmin = user?.role === 'admin';
-            if(!isAdmin){
-                return res.status(403).send({ message: 'forbidden'});
+            if (!isAdmin) {
+                return res.status(403).send({ message: 'forbidden' });
             };
             next();
         }
@@ -70,9 +70,9 @@ async function run() {
         });
 
         //checking if admin
-        app.get('/admin', tokenVerifier, async(req, res) => {
+        app.get('/admin', tokenVerifier, async (req, res) => {
             const email = req.query.email;
-            const query = { email: email};
+            const query = { email: email };
             const result = await userCollection.findOne(query);
             res.send(result);
         })
@@ -88,9 +88,9 @@ async function run() {
             res.send(result);
         });
 
-        app.patch('/users', tokenVerifier, async(req, res) => {
+        app.patch('/users', tokenVerifier, async (req, res) => {
             const email = req.query.email;
-            const query = { email: email};
+            const query = { email: email };
             const updatedDoc = {
                 $set: req.body
             };
@@ -99,8 +99,8 @@ async function run() {
         })
 
         //camp related apis
-        app.post('/camps', tokenVerifier, adminVerifier, async(req, res) => {
-            const {fees, participantCount, dateTime, ...others } = req.body;
+        app.post('/camps', tokenVerifier, adminVerifier, async (req, res) => {
+            const { fees, participantCount, dateTime, ...others } = req.body;
             const modified = {
                 ...others,
                 fees: parseFloat(fees),
@@ -111,49 +111,92 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/camps/count', async(req, res) => {
-            const result = await campCollection.estimatedDocumentCount();
-            res.send({count: result});
+        app.get('/camps/count', async (req, res) => {
+            const searchKey = req.query.searchKey
+            const query = {
+                $or: [
+                    { name: { $regex: searchKey, $options: 'i' } },
+                    { location: { $regex: searchKey, $options: 'i' } },
+                    { professionalName: { $regex: searchKey, $options: 'i' } },
+                    { dateTime: { $regex: searchKey, $options: 'i' } }
+                ]
+            }
+            const result = await campCollection.countDocuments(query);
+            res.send({ count: result });
         });
 
-        app.get('/camps/:id', async(req, res) => {
+        app.get('/adminCamps/count', tokenVerifier, adminVerifier, async (req, res) => {
+            const email = req.query.email;
+            const searchKey = req.query.searchKey;
+            const query = {
+                $and: [
+                    { addedBy: email },
+                    {
+                        $or: [
+                            { name: { $regex: searchKey, $options: 'i' } },
+                            { location: { $regex: searchKey, $options: 'i' } },
+                            { professionalName: { $regex: searchKey, $options: 'i' } },
+                            { dateTime: { $regex: searchKey, $options: 'i' } }
+                        ]
+                    }
+                ]
+            }
+            const result = await campCollection.countDocuments(query);
+            res.send({ count: result });
+        });
+
+        app.get('/camps/:id', async (req, res) => {
             const id = req.params.id;
-            const query = { _id: new ObjectId(id)};
+            const query = { _id: new ObjectId(id) };
             const result = await campCollection.findOne(query);
             res.send(result);
         })
 
-        app.get('/camps', async(req,res) => {
+        app.get('/camps', async (req, res) => {
             const page = parseInt(req.query.page);
             const sortBy = req.query.sortBy;
             const searchKey = req.query.searchKey;
             const query = {
                 $or: [
-                    { name: { $regex: searchKey, $options: 'i'} },
-                    { location: { $regex: searchKey, $options: 'i'} },
-                    { professionalName: { $regex: searchKey, $options: 'i'} },
-                    { dateTime: { $regex: searchKey, $options: 'i'} }
+                    { name: { $regex: searchKey, $options: 'i' } },
+                    { location: { $regex: searchKey, $options: 'i' } },
+                    { professionalName: { $regex: searchKey, $options: 'i' } },
+                    { dateTime: { $regex: searchKey, $options: 'i' } }
                 ]
             }
-            const result = await campCollection.find(query).skip((page-1) * 6).limit(6).sort({[sortBy]: 1}).collation({ locale: 'en', strength: 2 }).toArray();
+            const result = await campCollection.find(query).skip((page - 1) * 6).limit(6).sort({ [sortBy]: 1 }).collation({ locale: 'en', strength: 2 }).toArray();
             res.send(result);
         });
 
-        app.get('/adminCamps', tokenVerifier, adminVerifier, async(req, res) => {
+        app.get('/adminCamps', tokenVerifier, adminVerifier, async (req, res) => {
             const email = req.query.email;
-            const query = { addedBy: email};
-            const result = await campCollection.find().toArray();
+            const searchKey = req.query.searchKey;
+            const page = parseInt(req.query.page);
+            const query = {
+                $and: [
+                    { addedBy: email },
+                    {
+                        $or: [
+                            { name: { $regex: searchKey, $options: 'i' } },
+                            { location: { $regex: searchKey, $options: 'i' } },
+                            { professionalName: { $regex: searchKey, $options: 'i' } },
+                            { dateTime: { $regex: searchKey, $options: 'i' } }
+                        ]
+                    }
+                ]
+            }
+            const result = await campCollection.find(query).skip((page - 1) * 10).limit(10).toArray();
             res.send(result);
         });
 
-        app.delete('/delete-camp/:campId', tokenVerifier, adminVerifier, async(req, res) => {
+        app.delete('/delete-camp/:campId', tokenVerifier, adminVerifier, async (req, res) => {
             const id = req.params.campId;
             const query = { _id: new ObjectId(id) };
             const result = await campCollection.deleteOne(query);
             res.send(result);
         });
 
-        app.patch('/update-camp/:campId', tokenVerifier, adminVerifier, async(req, res) => {
+        app.patch('/update-camp/:campId', tokenVerifier, adminVerifier, async (req, res) => {
             const id = req.params.campId;
             const query = { _id: new ObjectId(id) };
             const updatedDoc = {
