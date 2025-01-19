@@ -34,6 +34,7 @@ async function run() {
         const userCollection = client.db('care-camps').collection('users');
         const campCollection = client.db('care-camps').collection('camps');
         const registeredCampCollection = client.db('care-camps').collection('registeredCamps');
+        const reviewCollection = client.db('care-camps').collection('reviews');
 
         //auth middlewares
         const tokenVerifier = (req, res, next) => {
@@ -145,6 +146,26 @@ async function run() {
             const result = await campCollection.countDocuments(query);
             res.send({ count: result });
         });
+        
+        app.get('/registeredCamps/count', tokenVerifier, async (req, res) => {
+            const email = req.query.email;
+            const searchKey = req.query.searchKey;
+            const query = {
+                $and: [
+                    { participantEmail: email },
+                    {
+                        $or: [
+                            { name: { $regex: searchKey, $options: 'i' } },
+                            { location: { $regex: searchKey, $options: 'i' } },
+                            { professionalName: { $regex: searchKey, $options: 'i' } },
+                            { dateTime: { $regex: searchKey, $options: 'i' } }
+                        ]
+                    }
+                ]
+            }
+            const result = await registeredCampCollection.countDocuments(query);
+            res.send({ count: result });
+        });
 
         app.get('/camps/:id', async (req, res) => {
             const id = req.params.id;
@@ -212,7 +233,7 @@ async function run() {
             res.send(result);
         });
 
-        //camp joining related api
+        //registered camp related api
 
         app.put('/registeredCamps', tokenVerifier, async (req, res) => {
             const query = { findingKey: req.query.email + req.query.campId };
@@ -224,6 +245,49 @@ async function run() {
             const campQuery = { _id: new ObjectId(req.query.campId) };
             const inc = await campCollection.updateOne(campQuery, { $inc: { participantCount: 1 } });
             const result = await registeredCampCollection.updateOne(query, updatedDoc, option);
+            res.send(result);
+        });
+
+        app.get('/registeredCamps', tokenVerifier, async (req, res) => {
+            const email = req.query.email;
+            const searchKey = req.query.searchKey;
+            const page = parseInt(req.query.page);
+            const query = {
+                $and: [
+                    { participantEmail: email },
+                    {
+                        $or: [
+                            { name: { $regex: searchKey, $options: 'i' } },
+                            { location: { $regex: searchKey, $options: 'i' } },
+                            { professionalName: { $regex: searchKey, $options: 'i' } },
+                            { dateTime: { $regex: searchKey, $options: 'i' } }
+                        ]
+                    }
+                ]
+            }
+            const result = await registeredCampCollection.find(query).skip((page - 1) * 10).limit(10).toArray();
+            res.send(result);
+        });
+
+        app.delete('/cancel-registration/:id', tokenVerifier, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await registeredCampCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        //review related api
+        app.put('/reviews', tokenVerifier, async(req, res) => {
+            const findingKey = req.query.email + req.query.campId;
+            const query = { findingKey }
+            const updatedDoc = {
+                $set: {
+                    ...req.body,
+                    findingKey
+                }
+            };
+            const option = { upsert: true };
+            const result = await reviewCollection.updateOne(query, updatedDoc, option);
             res.send(result);
         })
 
