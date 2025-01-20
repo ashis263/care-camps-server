@@ -312,22 +312,48 @@ async function run() {
         });
 
         //payment related
-        app.post('/payments', tokenVerifier, async(req, res) => {
+        app.post('/payments', tokenVerifier, async (req, res) => {
             const doc = {
-                    ...req.body,
-                    findingKey: req.query.email + req.query.campId
+                ...req.body,
+                findingKey: req.query.email + req.query.campId
             };
             const result = await paymentCollection.insertOne(doc);
             res.send(result);
         });
 
-        app.patch('/registeredCamps/payment', tokenVerifier, async(req, res) => {
+        app.get('/payments', tokenVerifier, async (req, res) => {
+            const query = { addedBy: req.query.eamil };
+            const result = await paymentCollection.find(query).toArray();
+            res.send(result);
+        });
+
+        app.get('/payments/count', tokenVerifier, async (req, res) => {
+            const email = req.query.email;
+            const searchKey = req.query.searchKey;
+            const query = {
+                $and: [
+                    { paidBy: email },
+                    {
+                        $or: [
+                            { campName: { $regex: searchKey, $options: 'i' } },
+                            { paymentStatus: { $regex: searchKey, $options: 'i' } }
+                        ]
+                    }
+                ]
+            }
+            const result = await paymentCollection.countDocuments(query);
+            res.send({ count: result });
+        });
+
+        app.patch('/registeredCamps/payment', tokenVerifier, async (req, res) => {
             const query = {
                 $and: [
                     { findingKey: req.query.email + req.query.campId },
-                    { paymentStatus: {
-                        $exists: false
-                    }}
+                    {
+                        paymentStatus: {
+                            $exists: false
+                        }
+                    }
                 ]
             };
             const updatedDoc = {
