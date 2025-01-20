@@ -115,7 +115,7 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/camps/popular', async(req, res) => {
+        app.get('/camps/popular', async (req, res) => {
             const result = await campCollection.find().sort({ participantCount: -1 }).limit(6).toArray();
             res.send(result);
         })
@@ -156,16 +156,19 @@ async function run() {
 
         app.get('/registeredCamps/count', tokenVerifier, async (req, res) => {
             const email = req.query.email;
-            const searchKey = req.query.searchKey;
+            const searchKey = req.query?.searchKey;
+            const page = parseInt(req.query.page);
             const query = {
                 $and: [
                     { participantEmail: email },
                     {
                         $or: [
-                            { name: { $regex: searchKey, $options: 'i' } },
-                            { location: { $regex: searchKey, $options: 'i' } },
-                            { professionalName: { $regex: searchKey, $options: 'i' } },
-                            { dateTime: { $regex: searchKey, $options: 'i' } }
+                            { campName: { $regex: searchKey, $options: 'i' } },
+                            { participantEmail: { $regex: searchKey, $options: 'i' } },
+                            { participantName: { $regex: searchKey, $options: 'i' } },
+                            { fees: { $regex: searchKey, $options: 'i' } },
+                            { paymentStatus: { $regex: searchKey, $options: 'i' } },
+                            { confirmationStatus: { $regex: searchKey, $options: 'i' } }
                         ]
                     }
                 ]
@@ -265,25 +268,22 @@ async function run() {
             const email = req.query.email;
             const searchKey = req.query?.searchKey;
             const page = parseInt(req.query.page);
-            let result;
-            if (searchKey) {
-                const query = {
-                    $and: [
-                        { participantEmail: email },
-                        {
-                            $or: [
-                                { name: { $regex: searchKey, $options: 'i' } },
-                                { location: { $regex: searchKey, $options: 'i' } },
-                                { professionalName: { $regex: searchKey, $options: 'i' } },
-                                { dateTime: { $regex: searchKey, $options: 'i' } }
-                            ]
-                        }
-                    ]
-                }
-                result = await registeredCampCollection.find(query).skip((page - 1) * 10).limit(10).toArray();
-            }else{
-                result = await campCollection.find().toArray();
+            const query = {
+                $and: [
+                    { participantEmail: email },
+                    {
+                        $or: [
+                            { campName: { $regex: searchKey, $options: 'i' } },
+                            { participantEmail: { $regex: searchKey, $options: 'i' } },
+                            { participantName: { $regex: searchKey, $options: 'i' } },
+                            { fees: { $regex: searchKey, $options: 'i' } },
+                            { paymentStatus: { $regex: searchKey, $options: 'i' } },
+                            { confirmationStatus: { $regex: searchKey, $options: 'i' } }
+                        ]
+                    }
+                ]
             }
+            result = await registeredCampCollection.find(query).skip((page - 1) * 10).limit(10).toArray();
             res.send(result);
         });
 
@@ -294,20 +294,38 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/registeredCamps/all', tokenVerifier, async(req, res) => {
+            const query = { participantEmail: req.query.email};
+            const result = await registeredCampCollection.find(query).toArray();
+            res.send(result);
+        })
+
         app.get('/registeredCamps/admin', tokenVerifier, adminVerifier, async (req, res) => {
-            const result = await registeredCampCollection.find().toArray();
+            const searchKey = req.query.searchKey;
+            const query = {
+                $or: [
+                    { campName: { $regex: searchKey, $options: 'i' } },
+                    { participantEmail: { $regex: searchKey, $options: 'i' } },
+                    { participantName: { $regex: searchKey, $options: 'i' } },
+                    { fees: { $regex: searchKey, $options: 'i' } },
+                    { paymentStatus: { $regex: searchKey, $options: 'i' } },
+                    { confirmationStatus: { $regex: searchKey, $options: 'i' } },
+                ]
+            }
+            const result = await registeredCampCollection.find(query).toArray();
             res.send(result);
         });
 
         app.get('/registeredCamps/admin/count', tokenVerifier, adminVerifier, async (req, res) => {
-            const email = req.query.email;
             const searchKey = req.query.searchKey;
             const query = {
                 $or: [
-                    { name: { $regex: searchKey, $options: 'i' } },
-                    { location: { $regex: searchKey, $options: 'i' } },
-                    { professionalName: { $regex: searchKey, $options: 'i' } },
-                    { dateTime: { $regex: searchKey, $options: 'i' } }
+                    { campName: { $regex: searchKey, $options: 'i' } },
+                    { participantEmail: { $regex: searchKey, $options: 'i' } },
+                    { participantName: { $regex: searchKey, $options: 'i' } },
+                    { fees: { $regex: searchKey, $options: 'i' } },
+                    { paymentStatus: { $regex: searchKey, $options: 'i' } },
+                    { confirmationStatus: { $regex: searchKey, $options: 'i' } },
                 ]
             }
             const result = await registeredCampCollection.countDocuments(query);
@@ -354,7 +372,7 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/reviews', async(req, res) => {
+        app.get('/reviews', async (req, res) => {
             const result = await reviewCollection.find().toArray();
             res.send(result);
         })
@@ -382,7 +400,21 @@ async function run() {
         });
 
         app.get('/payments', tokenVerifier, async (req, res) => {
-            const query = { addedBy: req.query.eamil };
+            const searchKey = req.query.searchKey;
+            const query = {
+                $and: [
+                    { paidBy: req.query.email },
+                    {
+                        $or: [
+                            { campName: { $regex: searchKey, $options: 'i' } },
+                            { fees: { $regex: searchKey, $options: 'i' } },
+                            { paymentStatus: { $regex: searchKey, $options: 'i' } },
+                            { transactionId: { $regex: searchKey, $options: 'i' } },
+                            { confirmationStatus: { $regex: searchKey, $options: 'i' } }
+                        ]
+                    }
+                ]
+            };
             const result = await paymentCollection.find(query).toArray();
             res.send(result);
         });
@@ -396,7 +428,10 @@ async function run() {
                     {
                         $or: [
                             { campName: { $regex: searchKey, $options: 'i' } },
-                            { paymentStatus: { $regex: searchKey, $options: 'i' } }
+                            { fees: { $regex: searchKey, $options: 'i' } },
+                            { paymentStatus: { $regex: searchKey, $options: 'i' } },
+                            { transactionId: { $regex: searchKey, $options: 'i' } },
+                            { confirmationStatus: { $regex: searchKey, $options: 'i' } }
                         ]
                     }
                 ]
