@@ -5,6 +5,7 @@ const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
+const stripe = require('stripe')(process.env.PAYMENT_SK)
 const port = process.env.PORT || 5000;
 
 //middlewares
@@ -35,6 +36,7 @@ async function run() {
         const campCollection = client.db('care-camps').collection('camps');
         const registeredCampCollection = client.db('care-camps').collection('registeredCamps');
         const reviewCollection = client.db('care-camps').collection('reviews');
+        const paymentCollection = client.db('care-camps').collection('payments');
 
         //auth middlewares
         const tokenVerifier = (req, res, next) => {
@@ -146,7 +148,7 @@ async function run() {
             const result = await campCollection.countDocuments(query);
             res.send({ count: result });
         });
-        
+
         app.get('/registeredCamps/count', tokenVerifier, async (req, res) => {
             const email = req.query.email;
             const searchKey = req.query.searchKey;
@@ -178,9 +180,9 @@ async function run() {
             const page = parseInt(req.query.page);
             const sortBy = req.query.sortBy;
             let sorter;
-            if(sortBy === 'participantCount'){
+            if (sortBy === 'participantCount') {
                 sorter = { [sortBy]: -1 };
-            }else{
+            } else {
                 sorter = { [sortBy]: 1 };
             }
             const searchKey = req.query.searchKey;
@@ -283,7 +285,7 @@ async function run() {
         });
 
         //review related api
-        app.put('/reviews', tokenVerifier, async(req, res) => {
+        app.put('/reviews', tokenVerifier, async (req, res) => {
             const findingKey = req.query.email + req.query.campId;
             const query = { findingKey }
             const updatedDoc = {
@@ -294,6 +296,44 @@ async function run() {
             };
             const option = { upsert: true };
             const result = await reviewCollection.updateOne(query, updatedDoc, option);
+            res.send(result);
+        });
+
+        //payment intent creation api
+        app.post('/createPaymentIntent', tokenVerifier, async (req, res) => {
+            const { fees } = req.body;
+            const feesInCents = parseInt(fees * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: feesInCents,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({ clientSecret: paymentIntent.client_secret });
+        });
+
+        //payment related
+        app.post('/payments', tokenVerifier, async(req, res) => {
+            const doc = {
+                    ...req.body,
+                    findingKey: req.query.email + req.query.campId
+            };
+            const result = await paymentCollection.insertOne(doc);
+            res.send(result);
+        });
+
+        app.patch('/registeredCamps/payment', tokenVerifier, async(req, res) => {
+            const query = {
+                $and: [
+                    { findingKey: req.query.email + req.query.campId },
+                    { paymentStatus: {
+                        $exists: false
+                    }}
+                ]
+            };
+            const updatedDoc = {
+                $set: { paymentStatus: 'Paid' }
+            };
+            const result = await registeredCampCollection.updateOne(query, updatedDoc);
             res.send(result);
         })
 
