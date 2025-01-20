@@ -284,6 +284,51 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/registeredCamps/admin', tokenVerifier, adminVerifier, async(req, res) => {
+            const result = await registeredCampCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.get('/registeredCamps/admin/count', tokenVerifier, adminVerifier, async(req, res) => {
+            const email = req.query.email;
+            const searchKey = req.query.searchKey;
+            const query = {
+                $or: [
+                    { name: { $regex: searchKey, $options: 'i' } },
+                    { location: { $regex: searchKey, $options: 'i' } },
+                    { professionalName: { $regex: searchKey, $options: 'i' } },
+                    { dateTime: { $regex: searchKey, $options: 'i' } }
+                ]
+            }
+            const result = await registeredCampCollection.countDocuments(query);
+            res.send({ count: result });
+        });
+
+        app.delete('/admin/cancel-registration/:id', tokenVerifier, adminVerifier, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await registeredCampCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.patch('/registeredCamps/admin/status', tokenVerifier, adminVerifier, async (req, res) => {
+            const query = {
+                $and: [
+                    { findingKey: req.query.email + req.query.campId },
+                    {
+                        confirmationStatus: {
+                            $exists: false
+                        }
+                    }
+                ]
+            };
+            const updatedDoc = {
+                $set: { confirmationStatus: 'Confirmed' }
+            };
+            const result = await registeredCampCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        });
+
         //review related api
         app.put('/reviews', tokenVerifier, async (req, res) => {
             const findingKey = req.query.email + req.query.campId;
@@ -361,7 +406,7 @@ async function run() {
             };
             const result = await registeredCampCollection.updateOne(query, updatedDoc);
             res.send(result);
-        })
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
