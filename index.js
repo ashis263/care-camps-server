@@ -115,6 +115,11 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/camps/popular', async(req, res) => {
+            const result = await campCollection.find().sort({ participantCount: -1 }).limit(6).toArray();
+            res.send(result);
+        })
+
         app.get('/camps/count', async (req, res) => {
             const searchKey = req.query.searchKey
             const query = {
@@ -258,22 +263,27 @@ async function run() {
 
         app.get('/registeredCamps', tokenVerifier, async (req, res) => {
             const email = req.query.email;
-            const searchKey = req.query.searchKey;
+            const searchKey = req.query?.searchKey;
             const page = parseInt(req.query.page);
-            const query = {
-                $and: [
-                    { participantEmail: email },
-                    {
-                        $or: [
-                            { name: { $regex: searchKey, $options: 'i' } },
-                            { location: { $regex: searchKey, $options: 'i' } },
-                            { professionalName: { $regex: searchKey, $options: 'i' } },
-                            { dateTime: { $regex: searchKey, $options: 'i' } }
-                        ]
-                    }
-                ]
+            let result;
+            if (searchKey) {
+                const query = {
+                    $and: [
+                        { participantEmail: email },
+                        {
+                            $or: [
+                                { name: { $regex: searchKey, $options: 'i' } },
+                                { location: { $regex: searchKey, $options: 'i' } },
+                                { professionalName: { $regex: searchKey, $options: 'i' } },
+                                { dateTime: { $regex: searchKey, $options: 'i' } }
+                            ]
+                        }
+                    ]
+                }
+                result = await registeredCampCollection.find(query).skip((page - 1) * 10).limit(10).toArray();
+            }else{
+                result = await campCollection.find().toArray();
             }
-            const result = await registeredCampCollection.find(query).skip((page - 1) * 10).limit(10).toArray();
             res.send(result);
         });
 
@@ -284,12 +294,12 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/registeredCamps/admin', tokenVerifier, adminVerifier, async(req, res) => {
+        app.get('/registeredCamps/admin', tokenVerifier, adminVerifier, async (req, res) => {
             const result = await registeredCampCollection.find().toArray();
             res.send(result);
         });
 
-        app.get('/registeredCamps/admin/count', tokenVerifier, adminVerifier, async(req, res) => {
+        app.get('/registeredCamps/admin/count', tokenVerifier, adminVerifier, async (req, res) => {
             const email = req.query.email;
             const searchKey = req.query.searchKey;
             const query = {
