@@ -354,6 +354,11 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/reviews', async(req, res) => {
+            const result = await reviewCollection.find().toArray();
+            res.send(result);
+        })
+
         //payment intent creation api
         app.post('/createPaymentIntent', tokenVerifier, async (req, res) => {
             const { fees } = req.body;
