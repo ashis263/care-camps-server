@@ -294,8 +294,8 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/registeredCamps/all', tokenVerifier, async(req, res) => {
-            const query = { participantEmail: req.query.email};
+        app.get('/registeredCamps/all', tokenVerifier, async (req, res) => {
+            const query = { participantEmail: req.query.email };
             const result = await registeredCampCollection.find(query).toArray();
             res.send(result);
         })
@@ -456,6 +456,21 @@ async function run() {
             };
             const result = await registeredCampCollection.updateOne(query, updatedDoc);
             res.send(result);
+        });
+
+        //stat
+        app.get('/stat', async (req, res) => {
+            const campsWithParticipantCount = await campCollection.find({participantCount: {$gt: 0}}).toArray();
+            const totalCamps = await campCollection.estimatedDocumentCount();
+            const result = await campCollection.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalParticipants: { $sum: "$participantCount" }
+                    }
+                }
+            ]).toArray();
+            res.send({camps: campsWithParticipantCount, totalCamps, totalParticipants: result[0].totalParticipants});
         });
 
         // Send a ping to confirm a successful connection
