@@ -28,3 +28,7 @@ CareCams is simple health camp management system using reactJS, nodeJS, expressJ
 ## Live Link for this project
 - [https://care-camps.web.app/](https://care-camps.web.app/)
 - [https://care-camps.netlify.app/](https://care-camps.netlify.app/)
+
+## Organizer credentials
+- **email**: admin@care.camps
+- **Password**: asdfgH
