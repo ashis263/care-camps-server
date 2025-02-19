@@ -252,6 +252,17 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/professionals', async (req, res) => {
+            const result = await campCollection.find({}, { projection: { "professionalName": 1, _id: 1, location: 1, photoURL: 1, name: 1 } }).toArray();
+            result.map(res => {
+                const {_id, ...other} = res;
+                const id = new ObjectId(_id);
+                const time = id.getTimestamp();
+                res.time = time;
+            })
+            res.send(result);
+        })
+
         //registered camp related api
 
         app.put('/registeredCamps', tokenVerifier, async (req, res) => {
