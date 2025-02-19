@@ -6,6 +6,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
 const stripe = require('stripe')(process.env.PAYMENT_SK)
+const nodemailer = require("nodemailer");
+
 const port = process.env.PORT || 5000;
 
 //middlewares
@@ -472,6 +474,32 @@ async function run() {
             ]).toArray();
             res.send({camps: campsWithParticipantCount, totalCamps, totalParticipants: result[0].totalParticipants});
         });
+
+        //contact
+        app.post('/contact', async(req, res) => {
+            const data = req.body;
+            const transporter = nodemailer.createTransport({
+                service: "gmail",
+                auth: {
+                  user: "ashis263@gmail.com",
+                  pass: process.env.APP_PASS,
+                },
+              });
+              const sendMail = async (to, subject, text) => {
+                try {
+                  const info = await transporter.sendMail({
+                    from: 'ashis263@gmail.com',
+                    to,
+                    subject,
+                    text,
+                  });
+                  res.send({Status: "Success" });
+                } catch (error) {
+                    res.send({Status: "Failed" });
+                }
+              };
+              sendMail("ashis263@gmail.com", "New message from CareCamps", `From: ${data.name}, email: ${data.email}, message: ${data.message}`);
+        })
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
