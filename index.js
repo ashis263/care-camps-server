@@ -488,7 +488,7 @@ async function run() {
         });
 
         //user stat
-        app.get('/userStat', async(req, res) => {
+        app.get('/userStat', tokenVerifier, async(req, res) => {
             const email = req.query.email;
             const camps = await registeredCampCollection.find({participantEmail: email}).toArray();
             const paymentQuery = {
@@ -499,6 +499,14 @@ async function run() {
             }
             const payments = await paymentCollection.find(paymentQuery).toArray();
             res.send({camps: camps, payments: payments});
+        })
+
+        //adminStat
+        app.get('/adminStat', tokenVerifier, adminVerifier, async(req, res) => {
+            const payments = await paymentCollection.find({confirmationStatus: true}).toArray();
+            const camps = await registeredCampCollection.find().toArray();
+            const allCamps = await campCollection.find().toArray();
+            res.send({payments, camps, allCamps});
         })
 
         //contact
