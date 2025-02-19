@@ -39,6 +39,7 @@ async function run() {
         const registeredCampCollection = client.db('care-camps').collection('registeredCamps');
         const reviewCollection = client.db('care-camps').collection('reviews');
         const paymentCollection = client.db('care-camps').collection('payments');
+        const subscriberCollection = client.db('care-camps').collection('subscribers');
 
         //auth middlewares
         const tokenVerifier = (req, res, next) => {
@@ -462,7 +463,7 @@ async function run() {
 
         //stat
         app.get('/stat', async (req, res) => {
-            const campsWithParticipantCount = await campCollection.find({participantCount: {$gt: 0}}).toArray();
+            const campsWithParticipantCount = await campCollection.find({ participantCount: { $gt: 0 } }).toArray();
             const totalCamps = await campCollection.estimatedDocumentCount();
             const result = await campCollection.aggregate([
                 {
@@ -472,33 +473,44 @@ async function run() {
                     }
                 }
             ]).toArray();
-            res.send({camps: campsWithParticipantCount, totalCamps, totalParticipants: result[0].totalParticipants});
+            res.send({ camps: campsWithParticipantCount, totalCamps, totalParticipants: result[0].totalParticipants });
         });
 
         //contact
-        app.post('/contact', async(req, res) => {
+        app.post('/contact', async (req, res) => {
             const data = req.body;
             const transporter = nodemailer.createTransport({
                 service: "gmail",
                 auth: {
-                  user: "ashis263@gmail.com",
-                  pass: process.env.APP_PASS,
+                    user: "ashis263@gmail.com",
+                    pass: process.env.APP_PASS,
                 },
-              });
-              const sendMail = async (to, subject, text) => {
+            });
+            const sendMail = async (to, subject, text) => {
                 try {
-                  const info = await transporter.sendMail({
-                    from: 'ashis263@gmail.com',
-                    to,
-                    subject,
-                    text,
-                  });
-                  res.send({Status: "Success" });
+                    const info = await transporter.sendMail({
+                        from: 'ashis263@gmail.com',
+                        to,
+                        subject,
+                        text,
+                    });
+                    res.send({ Status: "Success" });
                 } catch (error) {
-                    res.send({Status: "Failed" });
+                    res.send({ Status: "Failed" });
                 }
-              };
-              sendMail("ashis263@gmail.com", "New message from CareCamps", `From: ${data.name}, email: ${data.email}, message: ${data.message}`);
+            };
+            sendMail("ashis263@gmail.com", "New message from CareCamps", `From: ${data.name}, email: ${data.email}, message: ${data.message}`);
+        })
+
+        //newsletter
+        app.post('/subscriber', async (req, res) => {
+            const existed = await subscriberCollection.findOne({ email: req.body.email });
+            if (existed) {
+                res.send({ existed: true });
+            } else {
+                const result = await subscriberCollection.insertOne(req.body);
+                res.send(result);
+            }
         })
 
         // Send a ping to confirm a successful connection
