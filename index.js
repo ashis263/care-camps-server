@@ -487,6 +487,20 @@ async function run() {
             res.send({ camps: campsWithParticipantCount, totalCamps, totalParticipants: result[0].totalParticipants });
         });
 
+        //user stat
+        app.get('/userStat', async(req, res) => {
+            const email = req.query.email;
+            const camps = await registeredCampCollection.find({participantEmail: email}).toArray();
+            const paymentQuery = {
+                $and : [
+                    {paidBy: email},
+                    {confirmationStatus: true}
+                ]
+            }
+            const payments = await paymentCollection.find(paymentQuery).toArray();
+            res.send({camps: camps, payments: payments});
+        })
+
         //contact
         app.post('/contact', async (req, res) => {
             const data = req.body;
